@@ -34,7 +34,7 @@ python run_gui.py
 3. Reports will be automatically saved to your Downloads folder
 
 ## Report Structure
-Each generated PDF contains 22 pages with:
+Each generated PDF contains at least 22 pages with:
 1. **Title Page** - University logo and completion trends
 2. **Student Specializations** - Pie chart and breakdown
 3. **Academic Years** - Distribution analysis
@@ -42,8 +42,8 @@ Each generated PDF contains 22 pages with:
 5. **Student Attendance** - Attendance rate analysis
 6. **Student Workload** - Workload level distribution
 7. **Teaching Methods** - Implementation analysis
-8. - 19. **Individual Questions** - Pareto analysis for each evaluation question
-20. - 22. **Comments Analysis** - Positive aspects, negative aspects, and improvement areas
+8. through 19. **Individual Questions** - Pareto analysis for each evaluation question
+20. through 22. **Comments Analysis** - Positive aspects, negative aspects, and improvement areas
 
 ## File Requirements
 - Excel files (.xlsx or .xls)
