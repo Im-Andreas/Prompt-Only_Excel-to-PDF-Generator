@@ -62,3 +62,29 @@ tempCodeRunnerFile.py
 
 # Project-specific files to ignore
 Raport_evaluare_Costin.pdf
+
+# PyInstaller build files
+*.spec
+Professor_Report_Generator.spec
+
+# Excel data files (keep templates, ignore actual data)
+QuestionPro-SR-RawData*.xlsx
+*RawData*.xlsx
+
+# Generated PDF reports
+report_*.pdf
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Batch file backups
+*.bat~
+
+# Test files
+test_*.py
+*_test.py

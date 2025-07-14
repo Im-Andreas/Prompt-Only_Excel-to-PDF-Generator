@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend to save memory
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
@@ -8,6 +10,7 @@ from reportlab.lib.fonts import addMapping
 from PIL import Image
 import os
 import shutil
+import gc  # For garbage collection
 
 # Placeholder for reading Excel data
 def read_excel(file_path):
@@ -24,7 +27,7 @@ def read_excel(file_path):
     return data
 
 # Function to create pie charts for each professor showing specialization distribution
-def create_professor_pie_charts(data, specific_professor=None):
+def create_professor_pie_charts(data, specific_professor=None, progress_callback=None):
     # Find the column immediately before "Level 2" (specializations)
     level2_index = data.columns.get_loc('Level 2')
     specialization_col = data.columns[level2_index - 1]
@@ -42,45 +45,77 @@ def create_professor_pie_charts(data, specific_professor=None):
         professors = all_professors
     
     # Create pie charts for selected professor(s)
-    for professor in professors:
+    for i, professor in enumerate(professors):
         if pd.isna(professor):  # Skip if professor name is NaN
             continue
-            
-        # Filter data for current professor
-        prof_data = data[data['Level 2'] == professor]
         
-        # Count specializations for this professor
-        spec_counts = prof_data[specialization_col].value_counts()
-        
-        if len(spec_counts) > 0:  # Only create chart if there's data
-            plt.figure(figsize=(12, 10))
-            wedges, texts, autotexts = plt.pie(spec_counts.values, labels=spec_counts.index, autopct='%1.1f%%', startangle=90)
+        try:
+            # Update progress if callback is provided
+            if progress_callback:
+                progress_callback(f"Processing professor {i+1}/{len(professors)}: {professor}")
             
-            # Increase font sizes for better readability
-            for text in texts:
-                text.set_fontsize(14)
-                text.set_fontweight('bold')
-            for autotext in autotexts:
-                autotext.set_fontsize(12)
-                autotext.set_fontweight('bold')
-                autotext.set_color('white')
+            print(f"Processing professor {i+1}/{len(professors)}: {professor}")
             
-            plt.title('Student Specialization Distribution', 
-                     fontsize=20, fontweight='bold', pad=30)
-            plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+            # Filter data for current professor
+            prof_data = data[data['Level 2'] == professor]
             
-            # Save chart with professor name (sanitize filename)
-            safe_filename = "".join(c for c in professor if c.isalnum() or c in (' ', '-', '_')).rstrip()
-            chart_filename = f"temp/pie_chart_{safe_filename}.png"
-            plt.savefig(chart_filename, bbox_inches='tight', dpi=150)
-            plt.close()
+            # Count specializations for this professor
+            spec_counts = prof_data[specialization_col].value_counts()
             
-            # Generate individual PDF for this professor
-            pdf_filename = f"output/report_{safe_filename}.pdf"
-            generate_professor_pdf(pdf_filename, chart_filename, professor, spec_counts, len(prof_data), specialization_col, prof_data)
-            
-            # Clean up temporary files after PDF generation
-            cleanup_temp_folder()
+            if len(spec_counts) > 0:  # Only create chart if there's data
+                # Create the pie chart
+                plt.figure(figsize=(12, 10))
+                wedges, texts, autotexts = plt.pie(spec_counts.values, labels=spec_counts.index, autopct='%1.1f%%', startangle=90)
+                
+                # Increase font sizes for better readability
+                for text in texts:
+                    text.set_fontsize(14)
+                    text.set_fontweight('bold')
+                for autotext in autotexts:
+                    autotext.set_fontsize(12)
+                    autotext.set_fontweight('bold')
+                    autotext.set_color('white')
+                
+                plt.title('Student Specialization Distribution', 
+                         fontsize=20, fontweight='bold', pad=30)
+                plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+                
+                # Save chart with professor name (sanitize filename)
+                safe_filename = "".join(c for c in professor if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                chart_filename = f"temp/pie_chart_{safe_filename}.png"
+                plt.savefig(chart_filename, bbox_inches='tight', dpi=150)
+                plt.close()  # Close the figure to free memory
+                plt.clf()    # Clear the current figure
+                
+                # Force garbage collection to free memory
+                gc.collect()
+                
+                # Generate individual PDF for this professor
+                pdf_filename = f"output/report_{safe_filename}.pdf"
+                generate_professor_pdf(pdf_filename, chart_filename, professor, spec_counts, len(prof_data), specialization_col, prof_data, data)
+                
+                if progress_callback:
+                    progress_callback(f"✓ Successfully generated report for {professor}")
+                print(f"✓ Successfully generated report for {professor}")
+            else:
+                if progress_callback:
+                    progress_callback(f"⚠ No data found for professor: {professor}")
+                print(f"⚠ No data found for professor: {professor}")
+                
+        except Exception as e:
+            error_msg = f"✗ Error processing professor {professor}: {str(e)}"
+            if progress_callback:
+                progress_callback(error_msg)
+            print(error_msg)
+            # Continue with next professor instead of crashing
+            continue
+    
+    # Clean up temporary files after ALL professors are processed
+    cleanup_temp_folder()
+    completion_msg = f"✓ Completed processing {len(professors)} professors"
+    if progress_callback:
+        progress_callback(completion_msg)
+    print(completion_msg)
             
 
 # Function to calculate proper image dimensions maintaining aspect ratio
@@ -134,8 +169,15 @@ def parse_level3_data(level3_value):
     return course, year
 
 # Function to generate detailed PDF for each professor
-def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts, total_students, specialization_col, prof_data):
+def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts, total_students, specialization_col, prof_data, data=None):
     c = canvas.Canvas(output_path, pagesize=letter)
+    
+    # If data is not provided, try to read it from the default location
+    if data is None:
+        try:
+            data = read_excel("assets/QuestionPro-SR-RawData.xlsx")
+        except:
+            data = prof_data  # Fallback to professor data
     
     # Register Arial Unicode MS or DejaVu fonts for UTF-8 support
     try:
@@ -236,6 +278,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
                     completion_chart_path = chart_path.replace('.png', '_completion_trends.png')
                     plt.savefig(completion_chart_path, bbox_inches='tight', dpi=150)
                     plt.close()
+                    plt.clf()
+                    gc.collect()
                     
                     # Add the completion trends chart to PDF
                     chart_width, chart_height = get_image_dimensions(completion_chart_path, max_width=500)
@@ -367,6 +411,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
         year_chart_path = chart_path.replace('.png', '_years.png')
         plt.savefig(year_chart_path, bbox_inches='tight', dpi=150)
         plt.close()
+        plt.clf()
+        gc.collect()
         
         # Page 3 content
         c.setFont(unicode_font, 26)
@@ -433,6 +479,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
         course_chart_path = chart_path.replace('.png', '_courses.png')
         plt.savefig(course_chart_path, bbox_inches='tight', dpi=150)
         plt.close()
+        plt.clf()
+        gc.collect()
         
         # Page 4 content
         c.setFont(unicode_font, 26)
@@ -510,6 +558,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
         attendance_chart_path = chart_path.replace('.png', '_attendance.png')
         plt.savefig(attendance_chart_path, bbox_inches='tight', dpi=150)
         plt.close()
+        plt.clf()
+        gc.collect()
         
         # Page 5 content
         c.setFont(unicode_font, 26)
@@ -604,6 +654,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
         workload_chart_path = chart_path.replace('.png', '_workload.png')
         plt.savefig(workload_chart_path, bbox_inches='tight', dpi=150)
         plt.close()
+        plt.clf()
+        gc.collect()
         
         # Page 6 content
         c.setFont(unicode_font, 26)
@@ -707,6 +759,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
         teaching_chart_path = chart_path.replace('.png', '_teaching_methods.png')
         plt.savefig(teaching_chart_path, bbox_inches='tight', dpi=150)
         plt.close()
+        plt.clf()
+        gc.collect()
         
         # Page 7 content
         c.setFont(unicode_font, 26)
@@ -840,6 +894,8 @@ def generate_professor_pdf(output_path, chart_path, professor_name, spec_counts,
                         question_chart_path = chart_path.replace('.png', f'_question_{q_index + 1}.png')
                         plt.savefig(question_chart_path, bbox_inches='tight', dpi=150)
                         plt.close()
+                        plt.clf()
+                        gc.collect()
                         
                         # Page content
                         c.setFont(unicode_font, 24)
