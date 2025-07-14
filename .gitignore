@@ -1,0 +1,64 @@
+# Ignore contents of temp folder but keep the folder
+temp/*
+!temp/.gitkeep
+
+# Ignore contents of output folder but keep the folder
+output/*
+!output/.gitkeep
+
+# Ignore contents of assets folder but keep the folder and PNG files
+assets/*
+!assets/*.png
+!assets/.gitkeep
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+tempCodeRunnerFile.py
+
+# Project-specific files to ignore
+Raport_evaluare_Costin.pdf
