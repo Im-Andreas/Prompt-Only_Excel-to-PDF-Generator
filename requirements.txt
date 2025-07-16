@@ -3,3 +3,5 @@ pandas[excel]
 matplotlib
 reportlab
 Pillow
+tkinter
+PIL
