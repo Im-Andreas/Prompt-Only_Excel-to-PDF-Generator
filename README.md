@@ -18,7 +18,7 @@ python build_executable.py
 **Alternatively**, just run ```Start_Professor_Report_Generator.bat```
 
 ## Instructions
-1. Press **Browse** button and select a Excel file to work with.
+1. Press **Browse** button and select an Excel file to work with.
 2. Select which professor you'd like a report on.
 3. Press **Generate PDF Report(s)**.
 
